@@ -6,9 +6,10 @@ export const dynamic = 'force-dynamic';
 export default async function AdminPage({
     searchParams,
 }: {
-    searchParams: { [key: string]: string | string[] | undefined };
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-    const secret = searchParams?.secret;
+    const resolvedParams = await searchParams;
+    const secret = resolvedParams?.secret;
 
     // Simple basic security (better than nothing for a quick dashboard)
     if (secret !== 'scoopii2026') {
@@ -22,13 +23,23 @@ export default async function AdminPage({
         );
     }
 
-    let rows = [];
+    interface PreOrder {
+        id: number;
+        created_at: Date;
+        first_name: string;
+        email: string;
+    }
+
+    let rows: PreOrder[] = [];
     try {
         if (!process.env.POSTGRES_URL) {
-            throw new Error("Database not connected.");
+            // If locally testing without DB, show empty or mock
+            // throw new Error("Database not connected.");
+            console.warn("DB not connected, showing empty.");
+        } else {
+            const result = await sql`SELECT * FROM preorders ORDER BY created_at DESC`;
+            rows = result.rows as unknown as PreOrder[];
         }
-        const result = await sql`SELECT * FROM preorders ORDER BY created_at DESC`;
-        rows = result.rows;
     } catch (e: any) {
         if (e.message?.includes('does not exist')) {
             rows = []; // Table not created yet
