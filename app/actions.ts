@@ -21,7 +21,7 @@ export async function savePreOrder(formData: FormData) {
 
     // 1. Try to save to Google Sheets
     // HARDCODED for reliability (Bypassing Vercel Env Var issues)
-    const scriptUrl = 'https://script.google.com/macros/s/AKfycbzvb1yF1hPshs8LoZLQ68kS4V0nqjwzUNd6ofSI5N7yuhnfClccaulf3EcC7p1XEMLahw/exec';
+    const scriptUrl = 'https://script.google.com/macros/s/AKfycbwcdBmlVYh2gFuISpBz3Dfd7w-ub6sntc_Wtl42_LMT3J7tWNmRtji8b5i-_3F69ldiLQ/exec';
     let sheetStatus = 'missing_config';
 
     if (scriptUrl && scriptUrl.startsWith('http')) {
