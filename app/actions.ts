@@ -21,7 +21,9 @@ export async function savePreOrder(formData: FormData) {
 
     // 1. Try to save to Google Sheets (if configured)
     const scriptUrl = process.env.GOOGLE_SHEET_URL;
-    if (scriptUrl) {
+    let sheetStatus = 'missing_config';
+
+    if (scriptUrl && scriptUrl.startsWith('http')) {
         try {
             const response = await fetch(scriptUrl, {
                 method: 'POST',
@@ -31,12 +33,15 @@ export async function savePreOrder(formData: FormData) {
 
             if (response.ok) {
                 console.log('✅ Saved to Google Sheets');
-                return { success: true, message: 'Successfully pre-ordered!' };
+                sheetStatus = 'success';
             } else {
-                console.error('❌ Google Sheet Error:', await response.text());
+                const text = await response.text();
+                console.error('❌ Google Sheet Error:', text);
+                sheetStatus = `API Error (${response.status})`;
             }
         } catch (error) {
             console.error('❌ Failed to save to Google Sheet:', error);
+            sheetStatus = 'Network Error';
         }
     }
 
@@ -46,5 +51,11 @@ export async function savePreOrder(formData: FormData) {
     // Simulate delay for UX
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    return { success: true, message: 'Successfully pre-ordered!' };
+    if (sheetStatus === 'success') {
+        return { success: true, message: 'Saved to Google Sheets & Logs!' };
+    } else if (sheetStatus === 'missing_config') {
+        return { success: true, message: 'Saved to Vercel Logs (Google Sheet URL is invalid or missing).' };
+    } else {
+        return { success: true, message: `Saved to Vercel Logs. Sheet Error: ${sheetStatus}` };
+    }
 }
