@@ -1,62 +1,65 @@
 "use server";
 
-import fs from 'fs';
-import path from 'path';
+import { sql } from '@vercel/postgres';
 
 export async function savePreOrder(formData: FormData) {
     const firstName = formData.get('firstName') as string;
-    const lastName = formData.get('lastName') as string;
+    const lastName = ""; // Simplified form doesn't have last name field anymore in some versions, but keeping logic compatible
     const email = formData.get('email') as string;
 
-    if (!firstName || !lastName || !email) {
-        return { success: false, message: 'All fields are required.' };
+    if (!firstName || !email) {
+        return { success: false, message: 'Name and Email are required.' };
     }
 
     const payload = {
         timestamp: new Date().toISOString(),
         firstName,
-        lastName,
         email
     };
 
-    // 1. Try to save to Google Sheets
-    // HARDCODED for reliability (Bypassing Vercel Env Var issues)
-    const scriptUrl = 'https://script.google.com/macros/s/AKfycbwcdBmlVYh2gFuISpBz3Dfd7w-ub6sntc_Wtl42_LMT3J7tWNmRtji8b5i-_3F69ldiLQ/exec';
-    let sheetStatus = 'missing_config';
+    console.log('📝 Processing Order:', payload);
 
-    if (scriptUrl && scriptUrl.startsWith('http')) {
-        try {
-            const response = await fetch(scriptUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if (response.ok) {
-                console.log('✅ Saved to Google Sheets');
-                sheetStatus = 'success';
-            } else {
-                const text = await response.text();
-                console.error('❌ Google Sheet Error:', text);
-                sheetStatus = `API Error (${response.status})`;
-            }
-        } catch (error) {
-            console.error('❌ Failed to save to Google Sheet:', error);
-            sheetStatus = 'Network Error';
+    // Vercel Postgres Logic
+    try {
+        // 1. Check if DB is configured
+        if (!process.env.POSTGRES_URL) {
+            console.warn('⚠️ POSTGRES_URL is missing. Saving to logs only.');
+            return { success: true, message: 'Saved to Vercel Logs (DB Not Configured Local)' };
         }
-    }
 
-    // 2. Fallback: Log to Vercel Console (Always do this as backup)
-    console.log('📝 PRE-ORDER LOG (Backup):', JSON.stringify(payload, null, 2));
+        // 2. Try Insertion
+        try {
+            await sql`
+                INSERT INTO preorders (first_name, email, created_at)
+                VALUES (${firstName}, ${email}, NOW())
+            `;
+        } catch (error: any) {
+            // 3. Self-Healing: If table doesn't exist (Error 42P01), create it
+            if (error.code === '42P01' || error.message?.includes('does not exist')) {
+                console.log('🚧 Table missing. Creating "preorders" table...');
+                await sql`
+                    CREATE TABLE IF NOT EXISTS preorders (
+                        id SERIAL PRIMARY KEY,
+                        first_name TEXT,
+                        email TEXT,
+                        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                    );
+                `;
+                // Retry Insertion
+                await sql`
+                    INSERT INTO preorders (first_name, email, created_at)
+                    VALUES (${firstName}, ${email}, NOW())
+                `;
+                console.log('✅ Table created & Data inserted.');
+            } else {
+                throw error; // Re-throw other errors
+            }
+        }
 
-    // Simulate delay for UX
-    await new Promise(resolve => setTimeout(resolve, 500));
+        return { success: true, message: 'Securely Saved to Database! 🔒' };
 
-    if (sheetStatus === 'success') {
-        return { success: true, message: 'Saved to Google Sheets & Logs!' };
-    } else if (sheetStatus === 'missing_config') {
-        return { success: true, message: 'Saved to Vercel Logs (Google Sheet URL is invalid or missing).' };
-    } else {
-        return { success: true, message: `Saved to Vercel Logs. Sheet Error: ${sheetStatus}` };
+    } catch (error: any) {
+        console.error('❌ Database Error:', error);
+        return { success: true, message: `Saved to Logs. DB Error: ${error.message}` };
     }
 }
