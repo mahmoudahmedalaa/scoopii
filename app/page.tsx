@@ -294,7 +294,7 @@ export default function Home() {
                 </button>
                 {feedback && (
                   <p className={`mt-4 text-xs font-bold uppercase tracking-widest ${feedback.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
-                    {feedback.type === 'success' ? "Pre-order saved successfully!" : "Failed to save pre-order. Please try again later."}
+                    {feedback.message}
                   </p>
                 )}
               </form>
