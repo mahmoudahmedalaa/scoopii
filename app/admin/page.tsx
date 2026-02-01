@@ -27,6 +27,7 @@ export default async function AdminPage({
         id: number;
         created_at: Date;
         first_name: string;
+        last_name: string;
         email: string;
     }
 
@@ -65,14 +66,15 @@ export default async function AdminPage({
                                 <tr>
                                     <th className="px-6 py-4 font-semibold text-zinc-900">ID</th>
                                     <th className="px-6 py-4 font-semibold text-zinc-900">Date</th>
-                                    <th className="px-6 py-4 font-semibold text-zinc-900">Name</th>
+                                    <th className="px-6 py-4 font-semibold text-zinc-900">First Name</th>
+                                    <th className="px-6 py-4 font-semibold text-zinc-900">Last Name</th>
                                     <th className="px-6 py-4 font-semibold text-zinc-900">Email</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-zinc-100">
                                 {rows.length === 0 ? (
                                     <tr>
-                                        <td colSpan={4} className="px-6 py-12 text-center text-zinc-400 italic">
+                                        <td colSpan={5} className="px-6 py-12 text-center text-zinc-400 italic">
                                             No orders found (or database empty).
                                         </td>
                                     </tr>
@@ -84,6 +86,7 @@ export default async function AdminPage({
                                                 {new Date(row.created_at).toLocaleString()}
                                             </td>
                                             <td className="px-6 py-4 text-zinc-900 font-medium">{row.first_name}</td>
+                                            <td className="px-6 py-4 text-zinc-900 font-medium">{row.last_name || '-'}</td>
                                             <td className="px-6 py-4 text-zinc-600">{row.email}</td>
                                         </tr>
                                     ))
